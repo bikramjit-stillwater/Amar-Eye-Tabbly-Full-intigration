@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -44,6 +44,12 @@ def get_custom_first_line(name: str) -> str:
     )
 
 
+def clean_text(value):
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
 def clean_phone(value):
     if value is None:
         return ""
@@ -61,13 +67,11 @@ def clean_phone(value):
     s = s.replace("(", "")
     s = s.replace(")", "")
 
-    # remove everything except digits
     s = re.sub(r"[^\d]", "", s)
 
     if not s:
         return ""
 
-    # expected format: 91 + 10 digit mobile = 12 digits total
     if len(s) != 12 or not s.startswith("91"):
         return ""
 
@@ -166,10 +170,16 @@ def make_call(data: CallRequest):
     name = clean_text(data.name)
     instruction = clean_text(data.instruction)
 
-    if not phone or not name or not instruction:
+    if not phone:
         raise HTTPException(
             status_code=400,
-            detail="Phone, name, and instruction are required"
+            detail="Phone must be in 91XXXXXXXXXX format without +"
+        )
+
+    if not name or not instruction:
+        raise HTTPException(
+            status_code=400,
+            detail="Name and instruction are required"
         )
 
     url = "https://www.tabbly.io/dashboard/agents/endpoints/add-campaign-contacts"
@@ -253,7 +263,7 @@ async def bulk_upload(file: UploadFile = File(...)):
         if not phone or not name or not instruction:
             skipped.append({
                 "row": idx,
-                "reason": "Missing or invalid phone / name / custom instruction",
+                "reason": "Missing or invalid phone / name / custom instruction. Phone must be 91XXXXXXXXXX",
                 "data": row
             })
             continue
