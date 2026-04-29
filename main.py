@@ -44,12 +44,6 @@ def get_custom_first_line(name: str) -> str:
     )
 
 
-def clean_text(value):
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
 def clean_phone(value):
     if value is None:
         return ""
@@ -67,19 +61,15 @@ def clean_phone(value):
     s = s.replace("(", "")
     s = s.replace(")", "")
 
-    if s.startswith("+"):
-        s = "+" + re.sub(r"[^\d]", "", s[1:])
-    else:
-        s = re.sub(r"[^\d]", "", s)
+    # remove everything except digits
+    s = re.sub(r"[^\d]", "", s)
 
     if not s:
         return ""
 
-    if not s.startswith("+"):
-        if len(s) == 10:
-            s = "+91" + s
-        else:
-            s = "+" + s
+    # expected format: 91 + 10 digit mobile = 12 digits total
+    if len(s) != 12 or not s.startswith("91"):
+        return ""
 
     return s
 
